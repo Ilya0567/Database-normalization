@@ -1,0 +1,50 @@
+1.Вывести все уникальные бренды, у которых стандартная стоимость выше 1500 долларов.
+
+select distinct brand from "transaction" 
+where standard_cost > 1500
+
+2.Вывести все подтвержденные транзакции за период '2017-04-01' по '2017-04-09' включительно.
+select * 
+from "transaction"
+where transaction_date between '04.01.2017' and '04.09.2017'
+
+3.Вывести все профессии у клиентов из сферы IT или Financial Services, которые начинаются с фразы 'Senior'.
+select distinct job_title
+from customer 
+where (job_industry_category = 'IT' or job_industry_category = 'Financial Services')
+and job_title like 'Senior%'
+
+4.Вывести все бренды, которые закупают клиенты, работающие в сфере Financial Services
+select distinct brand  from "transaction" 
+where customer_id in (select customer_id from customer
+ 	                  where job_industry_category = 'Financial Services')
+
+5.Вывести 10 клиентов, которые оформили онлайн-заказ продукции из брендов 
+'Giant Bicycles', 'Norco Bicycles', 'Trek Bicycles'.
+
+select * 
+from customer 
+where customer_id in (select customer_id from "transaction"
+					  where online_order = 'True' 
+					  and brand in ( 'Giant Bicycles', 'Norco Bicycles', 'Trek Bicycles')
+					  )
+					  limit 10
+6.Вывести всех клиентов, у которых нет транзакций.
+					
+select * from customer 
+where customer_id not in (select customer_id from "transaction") 					  
+
+7.Вывести всех клиентов из IT, у которых транзакции с максимальной стандартной стоимостью.
+select * from customer
+where job_industry_category = 'IT' and customer_id  in 
+	(select customer_id from "transaction"
+ 		where standard_cost = 
+ 			(select max(standard_cost) from "transaction" )) 
+
+8.Вывести всех клиентов из сферы IT и Health, у которых есть подтвержденные транзакции 
+за период '2017-07-07' по '2017-07-17'.
+
+select * from customer
+where job_industry_category in ('IT', 'Health') and customer_id in 
+	(select customer_id from "transaction"
+		where order_status = 'Approved' and transaction_date between '07-07-2017' and '17-07-2017')
