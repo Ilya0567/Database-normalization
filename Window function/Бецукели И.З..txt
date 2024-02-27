@@ -1,0 +1,100 @@
+Вывести распределение (количество) клиентов по сферам деятельности,
+отсортировав результат по убыванию количества. — (1 балл)
+
+select job_industry_category, count(*) 
+from customer 
+group by job_industry_category
+order by count(*) desc
+
+
+Найти сумму транзакций за каждый месяц по сферам деятельности, 
+отсортировав по месяцам и по сфере деятельности. — (1 балл)
+
+select date_trunc('month', t.transaction_date:: date) as month
+      ,c.job_industry_category as category
+      ,sum(t.list_price) as sum
+from "transaction" t, customer c
+group by c.job_industry_category, month
+order by month, category
+
+
+Вывести количество онлайн-заказов для всех брендов в рамках подтвержденных 
+заказов клиентов из сферы IT. — (1 балл)
+
+select count(t.online_order) as count
+      ,t.brand as brand
+from "transaction" t, customer c
+where t.online_order = 'True' and c.job_industry_category = 'IT'
+group by brand 
+
+
+Найти по всем клиентам сумму всех транзакций (list_price), максимум, минимум и количество транзакций, 
+отсортировав результат по убыванию суммы транзакций и количества клиентов. 
+Выполните двумя способами: используя только group by и используя только оконные функции. 
+Сравните результат
+
+select c.customer_id 
+      ,sum(t.list_price) as sum
+      ,max(t.list_price) as max
+      ,min(t.list_price) as min
+      ,count(t.list_price) as count
+from customer c, "transaction" t
+group by c.customer_id
+order by sum
+-- 4000 строк
+
+select c.customer_id
+      ,t.list_price
+      ,sum(t.list_price) over (partition by c.customer_id) as sum
+      ,max(t.list_price) over (partition by c.customer_id)
+      ,min(t.list_price) over (partition by c.customer_id)
+      ,count(t.list_price) over (partition by c.customer_id)
+from customer c, "transaction" t
+order by sum
+
+
+Найти имена и фамилии клиентов с минимальной/максимальной суммой транзакций за весь период 
+(сумма транзакций не может быть null). 
+Напишите отдельные запросы для минимальной и максимальной суммы. — (2 балла)
+
+create temp table total as
+select t.customer_id as id
+      ,sum(t.list_price) as sum
+from "transaction" t
+group by id 
+
+select distinct  customer_id, first_name, last_name, total.sum
+from customer
+right join total on total.id = customer.customer_id 
+where (total.sum = (select min(sum) from total) 
+      or
+      total.sum = (select max(sum) from total))
+      
+
+
+Вывести только самые первые транзакции клиентов. 
+Решить с помощью оконных функций. — (1 балл)
+
+select customer_id as id
+      ,min(transaction_date :: date) over (partition by customer_id) as min
+from "transaction" 
+
+
+
+Вывести имена, фамилии и профессии клиентов, между транзакциями которых 
+был максимальный интервал (интервал вычисляется в днях) — (2 балла).
+
+with times as (select t.customer_id 
+      ,c.first_name 
+      ,c.last_name 
+      ,c.job_industry_category 
+      ,first_value(t.transaction_date :: date) over (partition by t.customer_id) as first_t
+      ,last_value(t.transaction_date :: date) over (partition by t.customer_id) as last_t
+from "transaction" t 
+left join customer c  
+on c.customer_id = t.customer_id
+)
+
+select distinct *, first_t - last_t
+from times
+where first_t - last_t in (select max(first_t - last_t) from times)
